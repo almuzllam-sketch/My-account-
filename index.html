@@ -1,0 +1,336 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>نظام المحاسب الذكي</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+    <style>
+        :root { --p: #007bff; --bg: #f8fafc; --s: #22c55e; --d: #ef4444; --txt: #1e293b; --mut: #64748b; }
+        body { font-family: 'Segoe UI', sans-serif; background: var(--bg); margin: 0; padding-bottom: 90px; direction: rtl; }
+        .page { display: none; padding: 15px; }
+        .page.active { display: block; }
+
+        /* تنسيق الأزرار والبحث */
+        .nav-row { display: flex; justify-content: space-between; align-items: center; background: white; padding: 10px; border-radius: 12px; margin-bottom: 10px; border: 1px solid #eee; }
+        .nav-row button { border: none; background: #e7f3ff; color: var(--p); width: 38px; height: 38px; border-radius: 10px; cursor: pointer; }
+        
+        .toggle-box { display: flex; background: #e2e8f0; border-radius: 12px; padding: 4px; margin-bottom: 15px; }
+        .toggle-btn { flex: 1; border: none; padding: 10px; border-radius: 10px; cursor: pointer; background: none; color: var(--mut); font-weight: bold; }
+        .toggle-btn.active { background: white; color: var(--p); box-shadow: 0 2px 5px rgba(0,0,0,0.1); }
+
+        .card { background: white; border-radius: 12px; padding: 12px; margin-bottom: 8px; display: flex; justify-content: space-between; align-items: center; border-right: 5px solid var(--p); box-shadow: 0 2px 5px rgba(0,0,0,0.05); }
+        .att-item { background: white; padding: 10px; border-radius: 10px; margin-bottom: 5px; display: flex; justify-content: space-between; align-items: center; border: 1px solid #eee; }
+        
+        .btn-status { padding: 8px 12px; border-radius: 8px; border: 1px solid #ddd; font-size: 11px; font-weight: bold; cursor: pointer; background: white; }
+        .p-active { background: #dcfce7; color: #166534; border-color: #166534; }
+        .a-active { background: #fee2e2; color: #991b1b; border-color: #991b1b; }
+
+        /* الإجماليات في صفحة الحضور */
+        .stats-container { display: flex; justify-content: space-around; gap: 10px; margin-bottom: 20px; text-align: center; }
+        .stat-card { flex: 1; background: white; padding: 10px; border-radius: 12px; box-shadow: 0 2px 5px rgba(0,0,0,0.05); border: 1px solid #eee; }
+        .stat-card b { display: block; font-size: 12px; color: var(--mut); margin-bottom: 5px; }
+        .stat-card span { font-size: 18px; font-weight: bold; }
+        .stat-present { color: var(--s); }
+        .stat-absent { color: var(--d); }
+        .stat-leave { color: var(--p); }
+        .worker-info-header { text-align: center; margin-bottom: 15px; }
+        .worker-info-header h4 { margin: 5px 0; color: var(--txt); font-size: 18px; }
+
+        /* --- التعديلات الجديدة لجدول الرواتب --- */
+        .table-res { width: 100%; background: white; border-radius: 12px; overflow-x: auto; }
+        table { width: 100%; border-collapse: collapse; min-width: 500px; }
+        th, td { padding: 10px; text-align: center; border-bottom: 1px solid #eee; font-size: 12px; }
+        th { background: #f1f5f9; color: var(--mut); }
+        .det-absent { font-size: 10px; color: var(--d); display: block; margin-top: 4px; line-height: 1.4; font-weight: normal; }
+        .table-footer { background: #f8fafc; font-weight: bold; border-top: 2px solid #ddd; }
+        /* -------------------------------------- */
+
+        .search-box { position: relative; margin-bottom: 12px; }
+        .search-box input { width: 100%; padding: 12px 40px 12px 15px; border-radius: 10px; border: 1px solid #ddd; outline: none; box-sizing: border-box; }
+        .search-box i { position: absolute; right: 15px; top: 15px; color: var(--mut); }
+
+        #historyDiv { margin-top: 15px; border-top: 1px solid #eee; padding-top: 10px; display: none; }
+        .history-item { display: flex; justify-content: space-between; background: #f8fafc; padding: 8px; border-radius: 8px; margin-bottom: 5px; font-size: 11px; border: 1px solid #eee; }
+
+        .bottom-nav { position: fixed; bottom: 0; width: 100%; background: white; display: flex; border-top: 1px solid #eee; padding: 10px 0; justify-content: space-around; z-index: 1000; }
+        .nav-item { text-align: center; color: var(--mut); cursor: pointer; flex: 1; }
+        .nav-item.active { color: var(--p); }
+        .nav-item i { font-size: 20px; display: block; }
+        
+        .modal { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.5); z-index: 9999; align-items: center; justify-content: center; }
+        .modal-content { background: white; width: 90%; max-width: 400px; padding: 20px; border-radius: 20px; max-height: 80vh; overflow-y: auto; }
+        .modal-content input { width: 100%; padding: 12px; margin: 8px 0; border: 1px solid #ddd; border-radius: 10px; box-sizing: border-box; }
+        
+        .fab { position: fixed; bottom: 85px; left: 20px; background: var(--p); color: white; width: 55px; height: 55px; border-radius: 50%; border: none; font-size: 24px; box-shadow: 0 5px 15px rgba(0,0,0,0.3); }
+
+        @media print {
+            @page { margin: 0.5cm; size: auto; }
+            html, body { height: auto; background: white; margin: 0 !important; padding: 0 !important; }
+            .no-print, .bottom-nav, .fab, .nav-row, .toggle-box, .search-box, .modal, #statsSection { display: none !important; }
+            .page { display: none !important; }
+            #salaryPage { display: block !important; padding: 0 !important; margin: 0 !important; }
+            .print-only { display: block !important; text-align: center; margin-bottom: 20px !important; }
+            .table-res { border: none; width: 100%; }
+            table { width: 100%; border: 1px solid #000; }
+            th, td { border: 1px solid #000; color: black !important; padding: 8px; }
+            .det-absent { color: black !important; }
+        }
+    </style>
+</head>
+<body>
+
+    <div id="workersPage" class="page active">
+        <h3>دليل العمال</h3>
+        <div class="search-box"><input type="text" placeholder="بحث عن عامل..." oninput="filterList('workersList', this.value)"><i class="fas fa-search"></i></div>
+        <div id="workersList"></div>
+        <button class="fab" onclick="openWModal()"><i class="fas fa-plus"></i></button>
+    </div>
+
+    <div id="attendancePage" class="page">
+        <div class="toggle-box no-print">
+            <button class="toggle-btn" id="btnDay" onclick="setMode('day')">🗓️ اليوم</button>
+            <button class="toggle-btn active" id="btnWorker" onclick="setMode('worker')">👤 العمال</button>
+        </div>
+
+        <div class="search-box no-print" id="attSearchContainer" style="display:none">
+            <input type="text" placeholder="بحث..." oninput="filterList('attList', this.value)">
+            <i class="fas fa-search"></i>
+        </div>
+
+        <div id="statsSection" style="display:none" class="no-print">
+            <div class="worker-info-header">
+                <h4 id="statWName">-</h4>
+                <small id="statMonth">-</small>
+            </div>
+            <div class="stats-container">
+                <div class="stat-card"><b class="stat-present">حاضر</b><span id="countP">0</span></div>
+                <div class="stat-card"><b class="stat-absent">غائب</b><span id="countA">0</span></div>
+                <div class="stat-card"><b class="stat-leave">إجازة</b><span id="countL">0</span></div>
+            </div>
+        </div>
+
+        <div class="nav-row no-print" id="workerNavRow">
+            <button onclick="navW(1)"><i class="fas fa-chevron-right"></i></button>
+            <b id="curWName">الموظف</b>
+            <button onclick="navW(-1)"><i class="fas fa-chevron-left"></i></button>
+        </div>
+
+        <div class="nav-row no-print">
+            <button onclick="navDate(1)"><i class="fas fa-chevron-right"></i></button>
+            <b id="curMonthText">الشهر</b>
+            <button onclick="navDate(-1)"><i class="fas fa-chevron-left"></i></button>
+        </div>
+
+        <div id="attList"></div>
+    </div>
+
+    <div id="salaryPage" class="page">
+        <h3 class="print-only" style="display:none;">كشف رواتب شهر: <span id="printDateTitle"></span></h3>
+        <button class="no-print" onclick="preparePrint()" style="width:100%; padding:15px; margin-bottom:10px; background:#22c55e; color:white; border:none; border-radius:12px; font-weight:bold; cursor:pointer;"><i class="fas fa-print"></i> طباعة الكشف</button>
+        
+        <div class="search-box no-print"><input type="text" id="salarySearch" placeholder="تصفية الكشف..." oninput="renderSalaries()"><i class="fas fa-search"></i></div>
+        
+        <div class="nav-row no-print">
+            <button onclick="navDate(1)"><i class="fas fa-chevron-right"></i></button>
+            <b id="salMonthLabel">..</b>
+            <button onclick="navDate(-1)"><i class="fas fa-chevron-left"></i></button>
+        </div>
+
+        <div class="no-print" style="margin-bottom:10px;">
+            <label style="font-size:13px; color:var(--p); cursor:pointer;">
+                <input type="checkbox" id="showDet" onchange="renderSalaries()"> إظهار تفاصيل تواريخ الغياب
+            </label>
+        </div>
+
+        <div class="table-res">
+            <table>
+                <thead>
+                    <tr><th>الموظف</th><th>الأساسي</th><th>اليومية</th><th>غياب</th><th>الخصم</th><th>الصافي</th></tr>
+                </thead>
+                <tbody id="salaryTableBody"></tbody>
+                <tfoot id="salaryFooter" class="table-footer"></tfoot>
+            </table>
+        </div>
+    </div>
+
+    <div id="wModal" class="modal"><div class="modal-content">
+        <h3 id="wTitle">بيانات العامل</h3>
+        <input type="text" id="wName" placeholder="الاسم">
+        <input type="number" id="wSal" placeholder="الراتب">
+        <input type="date" id="salDate">
+        <div id="historyDiv"><b style="font-size:12px;">تعديلات سابقة:</b><div id="salHistUI"></div></div>
+        <button onclick="saveWorker()" style="width:100%; padding:14px; background:var(--p); color:white; border:none; border-radius:10px; font-weight:bold; margin-top:15px;">حفظ</button>
+        <button onclick="closeM()" style="width:100%; background:none; border:none; margin-top:10px; color:gray;">إلغاء</button>
+    </div></div>
+
+    <div class="bottom-nav no-print">
+        <div class="nav-item active" onclick="showP('workersPage', this)"><i class="fas fa-users"></i><span>العمال</span></div>
+        <div class="nav-item" onclick="showP('attendancePage', this)"><i class="fas fa-calendar-check"></i><span>الحضور</span></div>
+        <div class="nav-item" onclick="showP('salaryPage', this)"><i class="fas fa-money-bill-wave"></i><span>الرواتب</span></div>
+    </div>
+
+<script>
+    let workers = JSON.parse(localStorage.getItem('W_DATA')) || [];
+    let att = JSON.parse(localStorage.getItem('A_DATA')) || {};
+    let curIdx = 0, curDate = new Date(), mode = 'worker', editIdx = null;
+
+    function fmt(num) { return Number(num).toLocaleString('en-US'); }
+    function fmtDate(dStr) { if(!dStr) return ""; let d = new Date(dStr); return `${d.getDate()}/${d.getMonth()+1}/${d.getFullYear()}`; }
+    function save() { localStorage.setItem('W_DATA', JSON.stringify(workers)); localStorage.setItem('A_DATA', JSON.stringify(att)); }
+
+    function getSalaryForMonth(worker, year, month) {
+        if (!worker.history || worker.history.length === 0) return worker.salary || 0;
+        let target = new Date(year, month + 1, 0);
+        let valid = worker.history.filter(h => new Date(h.date) <= target).sort((a,b)=> new Date(b.date) - new Date(a.date));
+        return valid.length > 0 ? valid[0].val : worker.salary;
+    }
+
+    function showP(id, el) {
+        document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
+        document.querySelectorAll('.nav-item').forEach(n => n.classList.remove('active'));
+        document.getElementById(id).classList.add('active');
+        el.classList.add('active');
+        if(id === 'workersPage') renderW();
+        if(id === 'attendancePage') renderAtt();
+        if(id === 'salaryPage') renderSalaries();
+    }
+
+    function renderW() {
+        let h = "";
+        workers.forEach((w, i) => {
+            h += `<div class="card"><div onclick="editW(${i})"><b>${w.name}</b><br><small>الراتب: ${fmt(w.salary)}</small></div>
+                <button onclick="delW(${i})" style="border:none; background:none; color:red"><i class="fas fa-trash"></i></button></div>`;
+        });
+        document.getElementById('workersList').innerHTML = h;
+    }
+
+    function renderAtt() {
+        let h = "", y = curDate.getFullYear(), m = curDate.getMonth();
+        let statsDiv = document.getElementById('statsSection');
+        if(mode === 'day') {
+            statsDiv.style.display = 'none';
+            document.getElementById('workerNavRow').style.display = 'none';
+            document.getElementById('attSearchContainer').style.display = 'block';
+            document.getElementById('curMonthText').innerText = curDate.toLocaleDateString('ar-EG', {day:'numeric', month:'long', year:'numeric'});
+            let dk = `${y}-${String(m+1).padStart(2,'0')}-${String(curDate.getDate()).padStart(2,'0')}`;
+            workers.forEach(w => {
+                let s = att[dk]?.[w.id] || "";
+                h += `<div class="att-item"><b>${w.name}</b><div>
+                    <button class="btn-status ${s==='p'?'p-active':''}" onclick="mark('${dk}',${w.id},'p')">حاضر</button>
+                    <button class="btn-status ${s==='a'?'a-active':''}" onclick="mark('${dk}',${w.id},'a')">غائب</button>
+                </div></div>`;
+            });
+        } else {
+            statsDiv.style.display = 'block';
+            document.getElementById('workerNavRow').style.display = 'flex';
+            document.getElementById('attSearchContainer').style.display = 'none';
+            if(workers[curIdx]) {
+                let w = workers[curIdx];
+                document.getElementById('curWName').innerText = w.name;
+                document.getElementById('statWName').innerText = w.name;
+                let monthTxt = curDate.toLocaleDateString('ar-EG', {month:'long', year:'numeric'});
+                document.getElementById('curMonthText').innerText = monthTxt;
+                document.getElementById('statMonth').innerText = monthTxt;
+                let days = new Date(y, m+1, 0).getDate();
+                let pCount = 0, aCount = 0;
+                for(let i=1; i<=days; i++) {
+                    let dk = `${y}-${String(m+1).padStart(2,'0')}-${String(i).padStart(2,'0')}`;
+                    let s = att[dk]?.[w.id] || "";
+                    if(s === 'p') pCount++; if(s === 'a') aCount++;
+                    h += `<div class="att-item"><span>${i} - ${new Date(y,m,i).toLocaleDateString('ar-EG',{weekday:'short'})}</span><div>
+                        <button class="btn-status ${s==='p'?'p-active':''}" onclick="mark('${dk}',${w.id},'p')">حاضر</button>
+                        <button class="btn-status ${s==='a'?'a-active':''}" onclick="mark('${dk}',${w.id},'a')">غائب</button>
+                    </div></div>`;
+                }
+                document.getElementById('countP').innerText = pCount;
+                document.getElementById('countA').innerText = aCount;
+            }
+        }
+        document.getElementById('attList').innerHTML = h;
+    }
+
+    function renderSalaries() {
+        let h = "", y = curDate.getFullYear(), m = curDate.getMonth(), days = new Date(y, m+1, 0).getDate();
+        let search = document.getElementById('salarySearch').value.toLowerCase();
+        let showDetailed = document.getElementById('showDet').checked;
+        let title = curDate.toLocaleDateString('ar-EG', {month:'long', year:'numeric'});
+        document.getElementById('salMonthLabel').innerText = title;
+        document.getElementById('printDateTitle').innerText = title;
+
+        let totalBase = 0, totalDed = 0, totalNet = 0;
+
+        workers.forEach(w => {
+            if(w.name.toLowerCase().includes(search)) {
+                let absDays = [];
+                for(let i=1; i<=days; i++) {
+                    let dk = `${y}-${String(m+1).padStart(2,'0')}-${String(i).padStart(2,'0')}`;
+                    if(att[dk]?.[w.id] === 'a') {
+                        let dName = new Date(y,m,i).toLocaleDateString('ar-EG',{weekday:'short'});
+                        absDays.push(`${dName} (${i}/${m+1})`);
+                    }
+                }
+                
+                let base = getSalaryForMonth(w, y, m), daily = base / days, ded = absDays.length * daily, net = base - ded;
+                totalBase += base; totalDed += ded; totalNet += net;
+
+                h += `<tr>
+                    <td style="text-align:right"><b>${w.name}</b>
+                        ${showDetailed && absDays.length > 0 ? `<span class="det-absent">غائب في: ${absDays.join(' | ')}</span>` : ''}
+                    </td>
+                    <td>${fmt(Math.round(base))}</td>
+                    <td>${fmt(Math.round(daily))}</td>
+                    <td>${absDays.length}</td>
+                    <td style="color:red">-${fmt(Math.round(ded))}</td>
+                    <td style="font-weight:bold; color:green">${fmt(Math.round(net))}</td>
+                </tr>`;
+            }
+        });
+        document.getElementById('salaryTableBody').innerHTML = h;
+        document.getElementById('salaryFooter').innerHTML = `
+            <tr style="background:#f1f5f9; font-weight:bold;">
+                <td>الإجمالي العام</td>
+                <td>${fmt(Math.round(totalBase))}</td>
+                <td>-</td>
+                <td>-</td>
+                <td style="color:red">-${fmt(Math.round(totalDed))}</td>
+                <td style="color:green">${fmt(Math.round(totalNet))}</td>
+            </tr>`;
+    }
+
+    function preparePrint() { window.print(); }
+    function mark(dk, id, s) { if(!att[dk]) att[dk] = {}; att[dk][id] = (att[dk][id] === s) ? "" : s; save(); renderAtt(); }
+    function setMode(m) { mode = m; document.getElementById('btnDay').className = m==='day'?'toggle-btn active':'toggle-btn'; document.getElementById('btnWorker').className = m==='worker'?'toggle-btn active':'toggle-btn'; renderAtt(); }
+    function navW(d) { curIdx = (curIdx + d + workers.length) % workers.length; renderAtt(); }
+    function navDate(d) { if(mode==='day' && document.getElementById('attendancePage').classList.contains('active')) curDate.setDate(curDate.getDate()+d); else curDate.setMonth(curDate.getMonth()+d); renderAtt(); renderSalaries(); }
+    
+    function editW(i) { editIdx = i; let w = workers[i]; document.getElementById('wName').value=w.name; document.getElementById('wSal').value=w.salary; document.getElementById('salDate').value = new Date().toISOString().split('T')[0]; document.getElementById('historyDiv').style.display='block'; renderHist(); document.getElementById('wModal').style.display='flex'; }
+    function openWModal() { editIdx = null; document.getElementById('wName').value=""; document.getElementById('wSal').value=""; document.getElementById('salDate').value = new Date().toISOString().split('T')[0]; document.getElementById('historyDiv').style.display='none'; document.getElementById('wModal').style.display='flex'; }
+
+    function renderHist() {
+        let h = ""; (workers[editIdx].history || []).sort((a,b)=>new Date(b.date)-new Date(a.date)).forEach((x, i) => {
+            h += `<div class="history-item"><span>📅 ${fmtDate(x.date)}</span><b>${fmt(x.val)}</b><i class="fas fa-trash" style="color:red" onclick="delHist(${i})"></i></div>`;
+        });
+        document.getElementById('salHistUI').innerHTML = h || "لا يوجد سجل";
+    }
+
+    function delHist(i) { if(confirm('حذف؟')) { workers[editIdx].history.splice(i,1); save(); renderHist(); renderW(); } }
+    function saveWorker() {
+        let n = document.getElementById('wName').value, s = parseFloat(document.getElementById('wSal').value), d = document.getElementById('salDate').value;
+        if(n && s) {
+            if(editIdx !== null) {
+                if(!workers[editIdx].history) workers[editIdx].history = [];
+                workers[editIdx].history.push({date: d, val: s});
+                workers[editIdx].name = n; workers[editIdx].salary = s;
+            } else { workers.push({id: Date.now(), name: n, salary: s, history: [{date: d, val: s}]}); }
+            save(); renderW(); closeM();
+        }
+    }
+    function delW(i) { if(confirm('حذف؟')) { workers.splice(i,1); save(); renderW(); } }
+    function closeM() { document.getElementById('wModal').style.display='none'; }
+    function filterList(id, t) { let val = t.toLowerCase(); document.querySelectorAll(`#${id} > div`).forEach(c => c.style.display = c.innerText.toLowerCase().includes(val)?'flex':'none'); }
+
+    renderW();
+</script>
+</body>
+</html>
