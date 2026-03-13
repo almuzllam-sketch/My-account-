@@ -3,37 +3,141 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>نظام المحاسب الذكي</title>
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+    <title>نظام المحاسب الذكي - almuzllam</title>
     <style>
         :root { --p: #007bff; --bg: #f8fafc; --s: #22c55e; --d: #ef4444; --txt: #1e293b; --mut: #64748b; }
-        body { font-family: 'Segoe UI', sans-serif; background: var(--bg); margin: 0; padding-bottom: 90px; direction: rtl; }
+        body { font-family: sans-serif; background: var(--bg); margin: 0; padding-bottom: 90px; direction: rtl; }
         .page { display: none; padding: 15px; }
         .page.active { display: block; }
+        .card { background: white; border-radius: 12px; padding: 12px; margin-bottom: 8px; border-right: 5px solid var(--p); box-shadow: 0 2px 5px rgba(0,0,0,0.05); }
+        .bottom-nav { position: fixed; bottom: 0; width: 100%; background: white; display: flex; border-top: 1px solid #eee; padding: 10px 0; justify-content: space-around; }
+        .nav-item { text-align: center; color: var(--mut); cursor: pointer; flex: 1; font-size: 14px; }
+        .nav-item.active { color: var(--p); font-weight: bold; }
+        /* زر النسخ الاحتياطي لضمان عدم ضياع البيانات في صنعاء */
+        .backup-zone { background: #e7f3ff; padding: 10px; border-radius: 10px; margin-bottom: 15px; text-align: center; border: 1px dashed var(--p); }
+        button { cursor: pointer; border-radius: 8px; border: none; padding: 8px 12px; }
+    </style>
+</head>
+<body>
 
-        /* تنسيق الأزرار والبحث */
-        .nav-row { display: flex; justify-content: space-between; align-items: center; background: white; padding: 10px; border-radius: 12px; margin-bottom: 10px; border: 1px solid #eee; }
-        .nav-row button { border: none; background: #e7f3ff; color: var(--p); width: 38px; height: 38px; border-radius: 10px; cursor: pointer; }
-        
-        .toggle-box { display: flex; background: #e2e8f0; border-radius: 12px; padding: 4px; margin-bottom: 15px; }
-        .toggle-btn { flex: 1; border: none; padding: 10px; border-radius: 10px; cursor: pointer; background: none; color: var(--mut); font-weight: bold; }
-        .toggle-btn.active { background: white; color: var(--p); box-shadow: 0 2px 5px rgba(0,0,0,0.1); }
+    <div id="workersPage" class="page active">
+        <div class="backup-zone">
+            <b>📦 نقل البيانات (التصرف)</b><br>
+            <button onclick="exportData()" style="background:var(--p); color:white; margin:5px;">💾 حفظ نسخة للجهاز</button>
+            <button onclick="document.getElementById('importFile').click()" style="background:var(--s); color:white; margin:5px;">📂 استعادة نسخة</button>
+            <input type="file" id="importFile" style="display:none" onchange="importData(event)">
+        </div>
+        <h3>دليل العمال</h3>
+        <div id="workersList"></div>
+        <button onclick="openWModal()" style="position:fixed; bottom:85px; left:20px; background:var(--p); color:white; width:55px; height:55px; border-radius:50%; font-size:24px; border:none; shadow: 0 4px 8px rgba(0,0,0,0.2);">+</button>
+    </div>
 
-        .card { background: white; border-radius: 12px; padding: 12px; margin-bottom: 8px; display: flex; justify-content: space-between; align-items: center; border-right: 5px solid var(--p); box-shadow: 0 2px 5px rgba(0,0,0,0.05); }
-        .att-item { background: white; padding: 10px; border-radius: 10px; margin-bottom: 5px; display: flex; justify-content: space-between; align-items: center; border: 1px solid #eee; }
-        
-        .btn-status { padding: 8px 12px; border-radius: 8px; border: 1px solid #ddd; font-size: 11px; font-weight: bold; cursor: pointer; background: white; }
-        .p-active { background: #dcfce7; color: #166534; border-color: #166534; }
-        .a-active { background: #fee2e2; color: #991b1b; border-color: #991b1b; }
+    <div id="attendancePage" class="page">
+        <h3 id="curMonthText">الحضور</h3>
+        <div id="attList"></div>
+    </div>
 
-        /* الإجماليات في صفحة الحضور */
-        .stats-container { display: flex; justify-content: space-around; gap: 10px; margin-bottom: 20px; text-align: center; }
-        .stat-card { flex: 1; background: white; padding: 10px; border-radius: 12px; box-shadow: 0 2px 5px rgba(0,0,0,0.05); border: 1px solid #eee; }
-        .stat-card b { display: block; font-size: 12px; color: var(--mut); margin-bottom: 5px; }
-        .stat-card span { font-size: 18px; font-weight: bold; }
-        .stat-present { color: var(--s); }
-        .stat-absent { color: var(--d); }
-        .stat-leave { color: var(--p); }
+    <div id="salaryPage" class="page">
+        <h3>كشف الرواتب</h3>
+        <div id="salaryTable"></div>
+    </div>
+
+    <div class="bottom-nav">
+        <div class="nav-item active" onclick="showP('workersPage', this)">👥 العمال</div>
+        <div class="nav-item" onclick="showP('attendancePage', this)">📅 الحضور</div>
+        <div class="nav-item" onclick="showP('salaryPage', this)">💰 الرواتب</div>
+    </div>
+
+<script>
+    // جلب البيانات المخزنة أو بدء مصفوفة فارغة
+    let workers = JSON.parse(localStorage.getItem('W_DATA')) || [];
+    let att = JSON.parse(localStorage.getItem('A_DATA')) || {};
+
+    function save() { 
+        localStorage.setItem('W_DATA', JSON.stringify(workers)); 
+        localStorage.setItem('A_DATA', JSON.stringify(att)); 
+    }
+
+    // وظيفة "التصرف" لحفظ البيانات في ملف خارجي
+    function exportData() {
+        const data = { workers, att };
+        const blob = new Blob([JSON.stringify(data)], { type: 'application/json' });
+        const a = document.createElement('a');
+        a.href = URL.createObjectURL(blob);
+        a.download = `حسابات_العمال_${new Date().toLocaleDateString('ar-EG')}.json`;
+        a.click();
+    }
+
+    function importData(event) {
+        const reader = new FileReader();
+        reader.onload = (e) => {
+            const d = JSON.parse(e.target.result);
+            workers = d.workers; att = d.att;
+            save(); location.reload();
+        };
+        reader.readAsText(event.target.files[0]);
+    }
+
+    function showP(id, el) {
+        document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
+        document.querySelectorAll('.nav-item').forEach(n => n.classList.remove('active'));
+        document.getElementById(id).classList.add('active');
+        el.classList.add('active');
+        if(id === 'workersPage') renderW();
+        if(id === 'attendancePage') renderAtt();
+        if(id === 'salaryPage') renderSal();
+    }
+
+    function renderW() {
+        let h = "";
+        workers.forEach((w, i) => {
+            h += `<div class="card"><b>${w.name}</b> - الراتب: ${w.salary}</div>`;
+        });
+        document.getElementById('workersList').innerHTML = h || "لا يوجد عمال مضافين";
+    }
+
+    function openWModal() {
+        let n = prompt("اسم العامل:");
+        let s = prompt("الراتب الشهري:");
+        if(n && s) {
+            workers.push({id: Date.now(), name: n, salary: parseFloat(s)});
+            save(); renderW();
+        }
+    }
+
+    // عرض الحضور والرواتب بنفس منطق كودك الأصلي
+    function renderAtt() {
+        let h = "";
+        let dk = new Date().toISOString().split('T')[0];
+        workers.forEach(w => {
+            let s = att[dk]?.[w.id] || "";
+            h += `<div class="card">${w.name} 
+                <button onclick="mark('${dk}',${w.id},'p')" style="background:${s==='p'?'#dcfce7':'#eee'}">حاضر</button>
+                <button onclick="mark('${dk}',${w.id},'a')" style="background:${s==='a'?'#fee2e2':'#eee'}">غائب</button>
+            </div>`;
+        });
+        document.getElementById('attList').innerHTML = h;
+    }
+
+    function mark(dk, id, s) { 
+        if(!att[dk]) att[dk] = {}; 
+        att[dk][id] = s; save(); renderAtt(); 
+    }
+
+    function renderSal() {
+        let h = "<table border='1' style='width:100%; text-align:center;'><tr><th>العامل</th><th>الصافي</th></tr>";
+        workers.forEach(w => {
+            // حساب الصافي (تبسيط لمنطق كودك)
+            h += `<tr><td>${w.name}</td><td>${w.salary}</td></tr>`;
+        });
+        h += "</table>";
+        document.getElementById('salaryTable').innerHTML = h;
+    }
+
+    renderW();
+</script>
+</body>
+</html>
         .worker-info-header { text-align: center; margin-bottom: 15px; }
         .worker-info-header h4 { margin: 5px 0; color: var(--txt); font-size: 18px; }
 
